@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Market Scanner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Fira+Code:wght@400;600&display=swap');
+  :root{--bg:#060606;--bg2:#0e0e0e;--bg3:rgba(255,255,255,.025);--border:rgba(255,255,255,.07);--purple:#9333ea;--purple-light:#c084fc;--purple-dim:rgba(139,92,246,.12);--purple-border:rgba(139,92,246,.3);--green:#4ade80;--red:#f87171;--yellow:#facc15;--text:#e8e8e8;--text-dim:#555;--text-mid:#888}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
+  ::-webkit-scrollbar{width:0}
+  #app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+  .ms-nav{background:rgba(6,6,6,.96);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.04);padding:14px 16px 0;position:sticky;top:0;z-index:50}
+  .ms-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .ms-wordmark{display:flex;align-items:center;gap:8px}
+  .ms-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#5b21b6,#9333ea);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(139,92,246,.3)}
+  .ms-name{font-weight:800;font-size:14px;letter-spacing:-.2px;color:#e8e8e8}
+  .ms-name span{color:#9333ea}
+  .ms-sub{font-size:9px;color:#2a2a2a;letter-spacing:2px;text-transform:uppercase}
+  .ms-live{display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:100px;padding:3px 9px}
+  .ms-dot{width:5px;height:5px;border-radius:50%;background:#9333ea;animation:ms-flick 2.5s ease infinite}
+  .ms-live-txt{font-size:9px;color:#7c3aed;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+  .ms-tabs{display:flex;gap:2px}
+  .ms-tab{flex:1;padding:8px 4px;border-radius:7px 7px 0 0;background:transparent;border:none;border-bottom:2px solid rgba(255,255,255,.03);cursor:pointer;font-family:'Syne',sans-serif;transition:all .2s}
+  .ms-tab.on{background:rgba(139,92,246,.12);border-bottom:2px solid #9333ea}
+  .ms-tab-ic{font-size:12px;color:#2a2a2a;margin-bottom:2px}
+  .ms-tab.on .ms-tab-ic{color:#c084fc}
+  .ms-tab-lb{font-size:10px;font-weight:400;color:#333}
+  .ms-tab.on .ms-tab-lb{font-weight:700;color:#d8b4fe}
+  .ms-panel{display:none;padding:0 16px 60px;overflow-y:auto;flex:1}
+  .ms-panel.on{display:block}
+  .ms-ph1{font-size:28px;font-weight:800;line-height:1.05;margin-bottom:8px;background:linear-gradient(130deg,#e8e8e8 45%,#9333ea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .ms-pdesc{color:#3a3a3a;font-size:13px;line-height:1.7}
+  .ms-sl{font-size:9px;color:#3a3a3a;text-transform:uppercase;letter-spacing:2.5px;margin-bottom:10px;font-weight:700}
+  .ms-div{height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,.2),transparent);margin:16px 0}
+  .ms-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:100px;font-size:10px;font-weight:600}
+  .ms-tag-p{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c084fc}
+  .ms-tag-g{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80}
+  .ms-tag-r{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
+  .ms-tag-y{background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.25);color:#facc15}
+  .ms-tag-d{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:#555}
+  .ms-upload{border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;padding:32px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;background:rgba(139,92,246,.03);transition:all .2s}
+  .ms-upload:hover{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.06)}
+  .ms-upload-t{color:#a855f7;font-size:14px;font-weight:600}
+  .ms-upload-s{color:#2a2a2a;font-size:12px}
+  .ms-g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:7px}
+  .ms-g2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+  .ms-sc{padding:12px 10px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);text-align:center}
+  .ms-sc.big{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(88,28,220,.08));border:1px solid rgba(139,92,246,.3)}
+  .ms-sc-l{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:7px;font-weight:700}
+  .ms-sc-v{font-family:'Fira Code',monospace;font-size:14px;font-weight:600;line-height:1}
+  .ms-sc.big .ms-sc-v{font-size:18px}
+  .ms-btn{width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#5b21b6,#9333ea);color:#fff;font-weight:700;font-size:13px;font-family:'Syne',sans-serif;transition:opacity .15s,transform .15s;box-shadow:0 6px 24px rgba(139,92,246,.22);margin-top:4px}
+  .ms-btn:hover{opacity:.9}
+  .ms-btn:active{transform:scale(.97)}
+  .ms-plat{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);margin-bottom:5px}
+  .ms-plat.best{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25)}
+  .ms-plat-n{font-weight:600;font-size:12px}
+  .ms-plat-ps{display:flex;gap:12px}
+  .ms-plat-pc{text-align:right}
+  .ms-plat-pt{font-size:8px;color:#333;text-transform:uppercase;letter-spacing:1px}
+  .ms-fact{display:flex;gap:8px;margin-bottom:6px;padding:9px 12px;border-radius:10px;background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.09)}
+  .ms-fact-b{color:#5b21b6;font-size:10px;margin-top:1px;flex-shrink:0}
+  .ms-fact-t{font-size:11px;color:#4a4a4a;line-height:1.5}
+  .ms-spin{width:36px;height:36px;border-radius:50%;border:2px solid rgba(139,92,246,.12);border-top:2px solid #a855f7;animation:ms-spin 1s linear infinite}
+  .ms-loading{display:flex;flex-direction:column;align-items:center;padding-top:60px;gap:20px;text-align:center}
+  .ms-loading-img{width:90px;height:90px;border-radius:16px;overflow:hidden;border:2px solid rgba(139,92,246,.4);box-shadow:0 0 28px rgba(139,92,246,.18)}
+  .ms-loading-img img{width:100%;height:100%;object-fit:cover}
+  .ms-loading-t{font-weight:700;font-size:16px;margin-bottom:4px}
+  .ms-loading-s{color:#333;font-size:12px}
+  .ms-hero{margin:0 -16px;height:170px;position:relative;overflow:hidden}
+  .ms-hero img{width:100%;height:100%;object-fit:cover}
+  .ms-hero-ov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.3) 0%,transparent 40%,#060606 100%)}
+  .ms-hero-badge{position:absolute;top:12px;right:12px;background:rgba(139,92,246,.4);backdrop-filter:blur(8px);border:1px solid rgba(139,92,246,.5);border-radius:100px;padding:4px 10px;font-size:9px;color:#e9d5ff;font-weight:600}
+  .ms-back{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:5px 12px;color:#fff;font-size:11px;font-weight:500;cursor:pointer;font-family:'Syne',sans-serif}
+  .ms-ph{margin-bottom:12px;padding-top:6px}
+  .ms-ph-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .ms-ph-name{font-size:18px;font-weight:800;line-height:1.15;margin-bottom:3px}
+  .ms-ph-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:3px}
+  .ms-ph-meta span{font-size:11px;color:#3a3a3a}
+  .ms-cond{padding:13px 14px;border-radius:12px;margin-bottom:10px;background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(88,28,220,.06));border:1px solid rgba(139,92,246,.22)}
+  .ms-cond-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .ms-cond-g{font-weight:700;font-size:14px;color:#e9d5ff}
+  .ms-cond-sc{font-family:'Fira Code',monospace;font-size:26px;font-weight:700;color:#c084fc}
+  .ms-cond-bar{height:4px;border-radius:100px;background:rgba(255,255,255,.05);margin-bottom:8px}
+  .ms-cond-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,#5b21b6,#c084fc);transition:width 1s ease}
+  .ms-cond-sum{font-size:11px;color:#484848;line-height:1.5}
+  .ms-rec{padding:18px;border-radius:12px;margin-bottom:8px;text-align:center;background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(88,28,220,.1));border:2px solid rgba(139,92,246,.38);box-shadow:0 4px 24px rgba(139,92,246,.1)}
+  .ms-rec-l{font-size:9px;color:#7c3aed;text-transform:uppercase;letter-spacing:2.5px;font-weight:700;margin-bottom:6px}
+  .ms-rec-p{font-family:'Fira Code',monospace;font-size:34px;font-weight:700;color:#e9d5ff;letter-spacing:-1px}
+  .ms-rec-r{font-size:10px;color:#3d3d3d;margin-top:4px}
+  .ms-sig{padding:12px 14px;border-radius:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .ms-sig-l{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:2px}
+  .ms-sig-v{font-weight:800;font-size:15px}
+  .ms-chart-wrap{border-radius:12px;padding:14px 6px 10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);margin-bottom:12px;position:relative}
+  .ms-chart-canvas{position:relative;height:180px}
+  .ms-chart-legend{display:flex;justify-content:center;gap:14px;padding:6px 14px 0}
+  .ms-leg-it{display:flex;align-items:center;gap:4px}
+  .ms-leg-line{width:14px;height:2px;border-radius:1px}
+  .ms-leg-lb{font-size:9px;color:#3a3a3a}
+  .ms-event{display:flex;gap:8px;margin-bottom:6px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)}
+  .ms-event-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .ms-event-d{font-size:9px;color:#3a3a3a;margin-bottom:2px;font-family:'Fira Code',monospace}
+  .ms-event-t{font-size:11px;color:#4a4a4a;line-height:1.5}
+  .ms-analyst{padding:12px 13px;border-radius:10px;margin-bottom:12px;background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.11)}
+  .ms-analyst-l{font-size:9px;color:#5b21b6;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:6px}
+  .ms-analyst-t{font-size:11px;color:#484848;line-height:1.6}
+  .ms-meta{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);margin-bottom:6px}
+  .ms-meta-k{font-size:11px;color:#2a2a2a}
+  .ms-meta-v{font-size:11px;color:#a855f7;font-weight:600;font-family:'Fira Code',monospace}
+  .ms-sizes{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;margin-bottom:12px}
+  .ms-size-chip{min-width:64px;padding:8px 6px;border-radius:10px;text-align:center;flex-shrink:0;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)}
+  .ms-size-lb{font-size:9px;font-weight:600;margin-bottom:4px;color:#555}
+  .ms-size-p{font-size:11px;color:#c084fc;font-family:'Fira Code',monospace}
+  .ms-err{text-align:center;padding-top:60px}
+  .ms-err-ic{font-size:36px;margin-bottom:10px}
+  .ms-err-t{font-weight:700;margin-bottom:6px;font-size:15px}
+  .ms-err-s{color:#3a3a3a;font-size:12px;margin-bottom:20px;line-height:1.6}
+  .ms-tg-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+  .ms-tg{padding:11px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);transition:all .2s}
+  .ms-tg.on{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.38)}
+  .ms-tg-ic{font-size:16px;margin-bottom:4px}
+  .ms-tg-lb{font-size:11px;font-weight:600;color:#444}
+  .ms-tg.on .ms-tg-lb{color:#c084fc}
+  .ms-sw{margin-top:7px;width:22px;height:12px;border-radius:100px;position:relative;background:rgba(255,255,255,.07);transition:background .2s}
+  .ms-tg.on .ms-sw{background:#7c3aed}
+  .ms-knob{position:absolute;top:2px;width:8px;height:8px;border-radius:50%;background:#fff;transition:left .2s;left:2px}
+  .ms-tg.on .ms-knob{left:12px}
+  .ms-notes{width:100%;height:65px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;color:#d0d0d0;font-size:12px;line-height:1.6;margin-bottom:14px;font-family:'Syne',sans-serif;resize:none;outline:none}
+  .ms-chg-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px}
+  .ms-chg-c{padding:10px 8px;border-radius:10px;text-align:center;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06)}
+  .ms-chg-p{font-size:8px;color:#2e2e2e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;font-weight:700}
+  .ms-note-box{padding:9px 12px;border-radius:9px;margin-bottom:12px;background:rgba(234,179,8,.05);border:1px solid rgba(234,179,8,.12);font-size:10px;color:#6b5900}
+  .ms-tip{display:flex;gap:8px;margin-bottom:6px;padding:9px 12px;border-radius:10px;background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.08)}
+  .ms-tip-n{color:#5b21b6;font-size:11px;margin-top:1px;flex-shrink:0}
+  .ms-tip-t{font-size:11px;color:#484848;line-height:1.5}
+  .ms-adj{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .ms-adj-l{font-size:11px;color:#3a3a3a}
+  @keyframes ms-spin{to{transform:rotate(360deg)}}
+  @keyframes ms-flick{0%,100%{opacity:1}50%{opacity:.6}}
+  @keyframes ms-fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .fu{animation:ms-fu .38s ease both}
+  .fu1{animation:ms-fu .38s .07s ease both}
+  .fu2{animation:ms-fu .38s .14s ease both}
+  .fu3{animation:ms-fu .38s .21s ease both}
+  .fu4{animation:ms-fu .38s .28s ease both}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="ms-nav">
+    <div class="ms-top">
+      <div class="ms-wordmark">
+        <div class="ms-logo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div>
+          <div class="ms-name">MARKET<span>SCANNER</span></div>
+          <div class="ms-sub">Resale Intelligence</div>
+        </div>
+      </div>
+      <div class="ms-live"><div class="ms-dot"></div><span class="ms-live-txt">Live</span></div>
+    </div>
+    <div class="ms-tabs">
+      <button class="ms-tab on" onclick="msTab('price',this)"><div class="ms-tab-ic">◈</div><div class="ms-tab-lb">Price Check</div></button>
+      <button class="ms-tab" onclick="msTab('resell',this)"><div class="ms-tab-ic">◎</div><div class="ms-tab-lb">Reseller</div></button>
+      <button class="ms-tab" onclick="msTab('market',this)"><div class="ms-tab-ic">◉</div><div class="ms-tab-lb">Market</div></button>
+    </div>
+  </div>
+  <div id="ms-price" class="ms-panel on"></div>
+  <div id="ms-resell" class="ms-panel"></div>
+  <div id="ms-market" class="ms-panel"></div>
+</div>
+
+<script>
+const S={price:{ph:'idle',img:null,data:null},resell:{ph:'idle',img:null,data:null,ex:{b:false,t:false,r:false,e:false,n:''}},market:{ph:'idle',img:null,data:null},chart:null,apiKey:localStorage.getItem('ms_key')||''};
+
+function msTab(id,btn){
+  document.querySelectorAll('.ms-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('ms-'+id).classList.add('on');
+}
+
+function renderKeySetup(){
+  return`<div style="padding:40px 16px 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#5b21b6,#9333ea);display:flex;align-items:center;justify-content:center;font-size:22px">&#128273;</div>
+    <div style="font-size:20px;font-weight:800;background:linear-gradient(130deg,#e8e8e8 45%,#9333ea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">API Key Required</div>
+    <p style="color:#3a3a3a;font-size:13px;line-height:1.7">Market Scanner calls the Claude API directly from your browser. You need a free Anthropic API key to use the downloaded version.</p>
+    <input id="ms-key-inp" type="password" placeholder="sk-ant-api03-..." value="${S.apiKey}" style="width:100%;padding:13px 14px;border-radius:10px;border:1px solid rgba(139,92,246,.35);background:rgba(139,92,246,.06);color:#e0e0e0;font-size:13px;font-family:'Fira Code',monospace;outline:none"/>
+    <button onclick="saveKey()" class="ms-btn" style="max-width:220px">Save &amp; Continue &#8594;</button>
+    <p style="font-size:11px;color:#2a2a2a;line-height:1.8">Get a free key at <span style="color:#9333ea">console.anthropic.com</span><br/>Your key is saved locally &mdash; never sent anywhere else.</p>
+  </div>`;
+}
+
+function saveKey(){
+  const v=document.getElementById('ms-key-inp')?.value?.trim();
+  if(!v)return;
+  S.apiKey=v;
+  localStorage.setItem('ms_key',v);
+  renderPrice();renderResell();renderMarket();
+}
+
+async function msCall(b64,sys,usr){
+  if(!S.apiKey){throw new Error('NO_KEY');}
+  const content=b64?[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:usr}]:[{type:'text',text:usr}];
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:sys,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content}]})});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+r.status);}
+  const d=await r.json();
+  const txt=d.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+  const m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+  if(!m)throw new Error('No JSON');
+  try{return JSON.parse(m[0])}catch{return JSON.parse(m[0].replace(/,\s*[}\]]/g,s=>s.slice(1)))}
+}
+
+const SYS_P=`Expert sneaker/streetwear/collectibles resale analyst. ALWAYS use web_search to find real current prices on StockX, GOAT, Klekt, eBay before answering. Return ONLY valid minified JSON, no markdown, no backticks, no explanation. Never fabricate prices.`;
+const SYS_R=`Expert reseller consultant. ALWAYS use web_search for current market prices. Critically assess condition from image. Return ONLY valid minified JSON. No markdown. No backticks.`;
+const SYS_M=`Financial analyst for sneaker/streetwear resale market. ALWAYS use web_search to find real price history data. Search: "[item] price history StockX", "[item] resale trend 2024 2025". priceHistory must have 12-15 entries with realistic numeric price values. Return ONLY valid minified JSON. No markdown. No backticks.`;
+
+const PR_P=`Identify item, search web for live prices now. Return JSON:
+{"name":"","brand":"","model":"","colorway":"","sku":"","category":"","releaseYear":"","retailPrice":"","lastSale":"","lowestAsk":"","highestBid":"","avgSalePrice":"","priceChange7d":"","priceChange30d":"","priceChange1y":"","trending":"up","annualSalesVolume":"","description":"","keyFacts":["","",""],"platforms":[{"name":"StockX","lowestAsk":"","lastSale":""},{"name":"GOAT","lowestAsk":"","lastSale":""},{"name":"Klekt","lowestAsk":"","lastSale":""},{"name":"eBay","lowestAsk":"","lastSale":""}],"sizePricing":[{"size":"US 8","price":""},{"size":"US 9","price":""},{"size":"US 10","price":""},{"size":"US 11","price":""},{"size":"US 12","price":""}],"dataFreshness":""}`;
+
+function PR_R(ex){return`Analyse for reseller. Extras: ${JSON.stringify(ex)}. Search web first. Return JSON:
+{"name":"","brand":"","model":"","colorway":"","sku":"","category":"","condition":{"grade":"","score":85,"summary":"","positives":[""],"issues":[""]},"marketPriceDS":"","recommendedPrice":"","priceRangeLow":"","priceRangeHigh":"","conditionDiscount":"","extrasValue":"","demandLevel":"","avgDaysToSell":"","bestPlatform":"","platforms":[{"name":"StockX","fee":"9.5%","estimatedNet":"","recommended":true},{"name":"GOAT","fee":"9.5-25%","estimatedNet":"","recommended":false},{"name":"Klekt","fee":"10%","estimatedNet":"","recommended":false},{"name":"eBay","fee":"~13%","estimatedNet":"","recommended":false},{"name":"Direct","fee":"0%","estimatedNet":"","recommended":false}],"sellingTips":["","",""],"dataFreshness":""}`}
+
+const PR_M=`Identify item, search web for price history & market data. IMPORTANT: priceHistory must be 12-15 objects with numeric price values based on real searched data. Return JSON:
+{"name":"","brand":"","model":"","colorway":"","sku":"","category":"","currentPrice":"","retailPrice":"","allTimeHigh":"","allTimeLow":"","totalAppreciation":"","liquidity":"High","volatility":"Medium","priceHistory":[{"label":"Jan '24","price":280},{"label":"Feb '24","price":295},{"label":"Mar '24","price":310},{"label":"Apr '24","price":300},{"label":"May '24","price":325},{"label":"Jun '24","price":320},{"label":"Jul '24","price":345},{"label":"Aug '24","price":340},{"label":"Sep '24","price":365},{"label":"Oct '24","price":355},{"label":"Nov '24","price":380},{"label":"Dec '24","price":395},{"label":"Jan '25","price":390},{"label":"Feb '25","price":405},{"label":"Mar '25","price":415}],"keyEvents":[{"date":"","event":"","impact":"positive"}],"buySignal":"","analystNote":"","topBuyers":"","peakSeason":"","dataFreshness":"","dataNotes":""}`;
+
+function tc(v){if(!v)return'dim';if(v.startsWith('+'))return'g';if(v.startsWith('-'))return'r';return'dim'}
+function tagClass(c){return c==='g'?'ms-tag-g':c==='r'?'ms-tag-r':c==='y'?'ms-tag-y':c==='p'?'ms-tag-p':'ms-tag-d'}
+
+function mkUpload(id,cb){
+  let inp=document.getElementById(id);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id=id;inp.style.display='none';document.body.appendChild(inp);}
+  inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>cb(ev.target.result);rd.readAsDataURL(f);inp.value='';};
+  return inp;
+}
+
+function renderUpload(clickFn){
+  const id='msu_'+Math.random().toString(36).slice(2);
+  setTimeout(()=>{const el=document.getElementById(id);if(el)el.addEventListener('click',clickFn);},0);
+  return`<div class="ms-upload" id="${id}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><div class="ms-upload-t">Upload image</div><div class="ms-upload-s">Camera or gallery</div></div>`;
+}
+
+function renderHero(src,backFn,badge){
+  const id='msb_'+Math.random().toString(36).slice(2);
+  setTimeout(()=>{const el=document.getElementById(id);if(el)el.addEventListener('click',backFn);},0);
+  return`<div class="ms-hero"><img src="${src}"/><div class="ms-hero-ov"></div><button class="ms-back" id="${id}">← New scan</button>${badge?`<div class="ms-hero-badge">${badge}</div>`:''}</div>`;
+}
+
+function renderPH(d){
+  return`<div class="ms-ph fu1"><div class="ms-ph-tags">${d.brand?`<span class="ms-tag ms-tag-p">${d.brand}</span>`:''} ${d.category?`<span class="ms-tag ms-tag-d">${d.category}</span>`:''} ${d.releaseYear?`<span class="ms-tag ms-tag-d">${d.releaseYear}</span>`:''}</div><div class="ms-ph-name">${d.name||'Unknown Item'}</div><div class="ms-ph-meta">${d.model?`<span>Model: ${d.model}</span>`:''} ${d.colorway?`<span>· ${d.colorway}</span>`:''} ${d.sku?`<span style="font-family:'Fira Code',monospace;font-size:10px;color:#2a2a2a">SKU: ${d.sku}</span>`:''}</div></div>`;
+}
+
+function renderLoading(img,msg){
+  return`<div class="ms-loading">${img?`<div class="ms-loading-img"><img src="${img}"/></div>`:''}<div class="ms-spin"></div><div><div class="ms-loading-t">${msg}</div><div class="ms-loading-s">Searching StockX · GOAT · Klekt · eBay</div></div></div>`;
+}
+
+function destroyChart(){if(S.chart){S.chart.destroy();S.chart=null;}}
+
+function buildChart(canvasId,history){
+  destroyChart();
+  const canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+  const prices=history.map(h=>typeof h.price==='number'?h.price:parseFloat(String(h.price).replace(/[^0-9.]/g,''))||0);
+  const validPrices=prices.filter(p=>p>0);
+  if(!validPrices.length)return;
+  const minP=Math.min(...validPrices),maxP=Math.max(...validPrices);
+  const isUp=prices[prices.length-1]>=prices[0];
+  const ctx=canvas.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,180);
+  grad.addColorStop(0,isUp?'rgba(147,51,234,.35)':'rgba(239,68,68,.35)');
+  grad.addColorStop(1,'rgba(6,6,6,0)');
+  S.chart=new Chart(canvas,{
+    type:'line',
+    data:{labels:history.map(h=>h.label),datasets:[{data:prices,borderColor:isUp?'#9333ea':'#f87171',borderWidth:2,backgroundColor:grad,fill:true,tension:0.4,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:isUp?'#c084fc':'#fca5a5',pointHoverBorderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d0d0d',borderColor:'rgba(139,92,246,.3)',borderWidth:1,titleColor:'#555',bodyColor:'#c084fc',titleFont:{family:'Fira Code',size:10},bodyFont:{family:'Fira Code',size:12,weight:'600'},padding:9,callbacks:{title:items=>items[0].label,label:item=>`$${Math.round(item.raw).toLocaleString()}`}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#333',font:{family:'Fira Code',size:8},maxTicksLimit:6,maxRotation:0}},y:{position:'right',grid:{color:'rgba(255,255,255,.04)'},border:{display:false},ticks:{color:'#333',font:{family:'Fira Code',size:8},callback:v=>`$${Math.round(v)}`,maxTicksLimit:5},min:Math.floor(minP*.96),max:Math.ceil(maxP*1.04)}}}
+  });
+}
+
+let pInp=null;
+function renderPrice(){
+  const p=S.price,el=document.getElementById('ms-price');
+  if(!S.apiKey){el.innerHTML=renderKeySetup();return;}
+  if(p.ph==='idle'){
+    pInp=mkUpload('ms-p-file',async img=>{S.price.img=img;S.price.ph='loading';renderPrice();try{S.price.data=await msCall(img.split(',')[1],SYS_P,PR_P);S.price.ph='result';}catch(e){S.price.ph='error';S.price.err=e.message;}renderPrice();});
+    el.innerHTML=`<div style="padding-top:32px;margin-bottom:24px" class="fu"><h1 class="ms-ph1">Instant<br/>Price Check</h1><p class="ms-pdesc">Photograph any sneaker, watch, or collectible. We search live resale platforms for real prices.</p></div>${renderUpload(()=>pInp.click())}<div class="ms-div"></div><div class="ms-sl">Supported categories</div><div style="display:flex;flex-wrap:wrap;gap:5px">${['Sneakers','Streetwear','Watches','Trading Cards','Bags','Vintage'].map(c=>`<span class="ms-tag ms-tag-d">${c}</span>`).join('')}</div>`;
+    return;
+  }
+  if(p.ph==='loading'){el.innerHTML=renderLoading(p.img,'Searching live prices...');return;}
+  if(p.ph==='error'){el.innerHTML=`<div class="ms-err"><div class="ms-err-ic">&#9888;</div><div class="ms-err-t">Search Failed</div><div class="ms-err-s">${p.err||'Try a clearer image.'}</div><button class="ms-btn" style="max-width:180px;margin:0 auto" onclick="S.price={ph:'idle',img:null,data:null};renderPrice()">Try Again</button></div>`;return;}
+  const d=p.data;
+  el.innerHTML=`${renderHero(p.img,()=>{S.price={ph:'idle',img:null,data:null};renderPrice();},d.dataFreshness)}${renderPH(d)}
+  ${d.description?`<p class="fu2" style="font-size:12px;color:#3e3e3e;line-height:1.65;margin-bottom:12px;border-left:2px solid rgba(139,92,246,.28);padding-left:11px">${d.description}</p>`:''}
+  <div class="ms-g3 fu2"><div class="ms-sc big"><div class="ms-sc-l">Last Sale</div><div class="ms-sc-v" style="color:#c084fc">${d.lastSale||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Lowest Ask</div><div class="ms-sc-v" style="color:#4ade80">${d.lowestAsk||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Highest Bid</div><div class="ms-sc-v" style="color:#60a5fa">${d.highestBid||'&mdash;'}</div></div></div>
+  <div class="ms-g2"><div class="ms-sc"><div class="ms-sc-l">Retail</div><div class="ms-sc-v" style="color:#555">${d.retailPrice||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Avg Sale</div><div class="ms-sc-v" style="color:#a78bfa">${d.avgSalePrice||'&mdash;'}</div></div></div>
+  <div class="fu3"><div class="ms-sl">Price changes</div><div class="ms-chg-grid"><div class="ms-chg-c"><div class="ms-chg-p">7 days</div><span class="ms-tag ${tagClass(tc(d.priceChange7d))}" style="font-size:10px;padding:2px 7px">${d.priceChange7d||'&mdash;'}</span></div><div class="ms-chg-c"><div class="ms-chg-p">30 days</div><span class="ms-tag ${tagClass(tc(d.priceChange30d))}" style="font-size:10px;padding:2px 7px">${d.priceChange30d||'&mdash;'}</span></div><div class="ms-chg-c"><div class="ms-chg-p">1 year</div><span class="ms-tag ${tagClass(tc(d.priceChange1y))}" style="font-size:10px;padding:2px 7px">${d.priceChange1y||'&mdash;'}</span></div></div></div>
+  ${d.platforms?.length?`<div class="fu3"><div class="ms-sl">Platform comparison</div>${d.platforms.map(p=>`<div class="ms-plat"><span class="ms-plat-n">${p.name}</span><div class="ms-plat-ps"><div class="ms-plat-pc"><div class="ms-plat-pt">Ask</div><span style="font-family:'Fira Code',monospace;font-size:12px;color:#4ade80;font-weight:600">${p.lowestAsk||'&mdash;'}</span></div><div class="ms-plat-pc"><div class="ms-plat-pt">Last</div><span style="font-family:'Fira Code',monospace;font-size:12px;color:#c084fc;font-weight:600">${p.lastSale||'&mdash;'}</span></div></div></div>`).join('')}</div>`:''}
+  ${d.sizePricing?.length?`<div class="fu3"><div class="ms-sl">Prices by size</div><div class="ms-sizes">${d.sizePricing.map(s=>`<div class="ms-size-chip"><div class="ms-size-lb">${s.size}</div><div class="ms-size-p">${s.price||'&mdash;'}</div></div>`).join('')}</div></div>`:''}
+  ${d.keyFacts?.length?`<div class="fu3"><div class="ms-sl">Key facts</div>${d.keyFacts.map(f=>`<div class="ms-fact"><span class="ms-fact-b">&#9670;</span><span class="ms-fact-t">${f}</span></div>`).join('')}</div>`:''}
+  ${d.annualSalesVolume?`<div class="ms-meta fu4"><span class="ms-meta-k">Annual Volume</span><span class="ms-meta-v">${d.annualSalesVolume}</span></div>`:''}
+  <button class="ms-btn fu4" onclick="S.price={ph:'idle',img:null,data:null};renderPrice()">Scan New Item</button>`;
+}
+
+let rInp=null;
+function renderResell(){
+  const rs=S.resell,el=document.getElementById('ms-resell');
+  if(!S.apiKey){el.innerHTML=renderKeySetup();return;}
+  if(rs.ph==='idle'||rs.ph==='config'){
+    rInp=mkUpload('ms-r-file',img=>{S.resell.img=img;S.resell.ph='config';renderResell();});
+    const imgHtml=rs.img?`<div style="position:relative;border-radius:12px;overflow:hidden;height:140px;margin-bottom:14px" class="fu1"><img src="${rs.img}" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),transparent)"></div><button onclick="document.getElementById('ms-r-file').click()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:4px 10px;color:#fff;font-size:10px;cursor:pointer;font-family:Syne,sans-serif">Change</button><span style="position:absolute;bottom:10px;left:12px;font-size:10px;color:#9333ea;font-weight:700">&#10003; Image ready</span></div>`:renderUpload(()=>rInp.click());
+    const ex=rs.ex;
+    const tgs=[{k:'b',ic:'&#128230;',lb:'Original Box'},{k:'t',ic:'&#127991;',lb:'Tags / Stickers'},{k:'r',ic:'&#129534;',lb:'Receipt'},{k:'e',ic:'&#10024;',lb:'Extras (dust bag)'}];
+    el.innerHTML=`<div style="padding-top:28px;margin-bottom:20px" class="fu"><h2 class="ms-ph1">Reseller<br/>Calculator</h2><p class="ms-pdesc">Upload your item. We assess condition, find live prices, and calculate net profit per platform.</p></div>${imgHtml}${rs.ph==='config'?`<div class="ms-div fu2"></div><div class="ms-sl fu2">What's included?</div><div class="ms-tg-grid fu2">${tgs.map(t=>`<div class="ms-tg ${ex[t.k]?'on':''}" onclick="S.resell.ex['${t.k}']=!S.resell.ex['${t.k}'];renderResell()"><div class="ms-tg-ic">${t.ic}</div><div class="ms-tg-lb">${t.lb}</div><div class="ms-sw"><div class="ms-knob"></div></div></div>`).join('')}</div><div class="ms-sl fu3">Notes</div><textarea class="ms-notes fu3" id="ms-r-notes" placeholder="e.g. size, condition details, purchase location...">${ex.n}</textarea><button class="ms-btn fu3" onclick="runResell()">Calculate Resell Value</button>`:''}`;
+    return;
+  }
+  if(rs.ph==='loading'){el.innerHTML=renderLoading(rs.img,'Analysing & calculating...');return;}
+  if(rs.ph==='error'){el.innerHTML=`<div class="ms-err"><div class="ms-err-ic">&#9888;</div><div class="ms-err-t">Analysis Failed</div><div class="ms-err-s">${rs.err||'Try again.'}</div><button class="ms-btn" style="max-width:180px;margin:0 auto" onclick="S.resell={ph:'idle',img:null,data:null,ex:{b:false,t:false,r:false,e:false,n:''}};renderResell()">Try Again</button></div>`;return;}
+  const d=rs.data;
+  el.innerHTML=`${renderHero(rs.img,()=>{S.resell={ph:'idle',img:null,data:null,ex:{b:false,t:false,r:false,e:false,n:''}};renderResell();},d.dataFreshness)}${renderPH(d)}
+  <div class="ms-cond fu2"><div class="ms-cond-top"><div><div class="ms-sl" style="margin-bottom:2px">Condition</div><div class="ms-cond-g">${d.condition?.grade||'&mdash;'}</div></div><span class="ms-cond-sc">${d.condition?.score||'&mdash;'}</span></div><div class="ms-cond-bar"><div class="ms-cond-fill" style="width:${d.condition?.score||80}%"></div></div><div class="ms-cond-sum">${d.condition?.summary||''}</div>${d.condition?.positives?.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">${d.condition.positives.map(p=>`<span class="ms-tag ms-tag-g" style="font-size:9px;padding:2px 7px">&#10003; ${p}</span>`).join('')}</div>`:''} ${d.condition?.issues?.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${d.condition.issues.map(i=>`<span class="ms-tag ms-tag-r" style="font-size:9px;padding:2px 7px">&#9888; ${i}</span>`).join('')}</div>`:''}</div>
+  <div class="ms-rec fu2"><div class="ms-rec-l">Recommended Selling Price</div><div class="ms-rec-p">${d.recommendedPrice||'&mdash;'}</div><div class="ms-rec-r">Range: ${d.priceRangeLow||'&mdash;'} &ndash; ${d.priceRangeHigh||'&mdash;'}</div></div>
+  <div class="ms-g3 fu2"><div class="ms-sc"><div class="ms-sc-l">Market DS</div><div class="ms-sc-v" style="color:#555">${d.marketPriceDS||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Demand</div><div class="ms-sc-v" style="font-size:12px;color:${d.demandLevel?.includes('High')?'#4ade80':d.demandLevel?.includes('Low')?'#f87171':'#facc15'}">${d.demandLevel||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Best Platform</div><div class="ms-sc-v" style="font-size:11px;color:#c084fc">${d.bestPlatform||'&mdash;'}</div></div></div>
+  ${d.platforms?.length?`<div class="fu3"><div class="ms-sl">Net profit by platform</div>${d.platforms.map(p=>`<div class="ms-plat ${p.recommended?'best':''}"><div><div style="display:flex;align-items:center;gap:5px"><span class="ms-plat-n">${p.name}</span>${p.recommended?`<span class="ms-tag ms-tag-p" style="font-size:9px;padding:1px 6px">&#9733; Best</span>`:''}</div><span style="font-size:9px;color:#2a2a2a">Fee: ${p.fee}</span></div><span style="font-family:'Fira Code',monospace;color:#4ade80;font-weight:700;font-size:14px">${p.estimatedNet||'&mdash;'}</span></div>`).join('')}</div>`:''}
+  <div class="fu3"><div class="ms-sl">Value adjustments</div>${d.conditionDiscount?`<div class="ms-adj"><span class="ms-adj-l">Condition discount</span><span class="ms-tag ms-tag-r" style="font-size:9px">${d.conditionDiscount}</span></div>`:''} ${d.extrasValue?`<div class="ms-adj"><span class="ms-adj-l">Accessories bonus</span><span class="ms-tag ms-tag-g" style="font-size:9px">${d.extrasValue}</span></div>`:''}</div>
+  ${d.sellingTips?.length?`<div class="fu4"><div class="ms-sl">Selling tips</div>${d.sellingTips.map((t,i)=>`<div class="ms-tip"><span class="ms-tip-n">${i+1}.</span><span class="ms-tip-t">${t}</span></div>`).join('')}</div>`:''}
+  <button class="ms-btn fu4" onclick="S.resell={ph:'idle',img:null,data:null,ex:{b:false,t:false,r:false,e:false,n:''}};renderResell()">Analyse New Item</button>`;
+}
+
+async function runResell(){
+  const n=document.getElementById('ms-r-notes');
+  if(n)S.resell.ex.n=n.value;
+  S.resell.ph='loading';renderResell();
+  try{S.resell.data=await msCall(S.resell.img.split(',')[1],SYS_R,PR_R(S.resell.ex));S.resell.ph='result';}
+  catch(e){S.resell.ph='error';S.resell.err=e.message;}
+  renderResell();
+}
+
+let mInp=null;
+function renderMarket(){
+  const m=S.market,el=document.getElementById('ms-market');
+  if(!S.apiKey){el.innerHTML=renderKeySetup();return;}
+  if(m.ph==='idle'){
+    mInp=mkUpload('ms-m-file',async img=>{S.market.img=img;S.market.ph='loading';destroyChart();renderMarket();try{S.market.data=await msCall(img.split(',')[1],SYS_M,PR_M);S.market.ph='result';}catch(e){S.market.ph='error';S.market.err=e.message;}renderMarket();if(S.market.ph==='result'&&S.market.data?.priceHistory?.length){requestAnimationFrame(()=>buildChart('ms-chart',S.market.data.priceHistory));}});
+    el.innerHTML=`<div style="padding-top:28px;margin-bottom:22px" class="fu"><h2 class="ms-ph1">Market<br/>Overview</h2><p class="ms-pdesc">Get a full market analysis: price history chart, key events, and investment signal for any item.</p></div>${renderUpload(()=>mInp.click())}<div class="ms-div"></div><div class="ms-sl">What you'll get</div>${[{i:'&#128200;',t:'Price history chart (12-18 months)'},{i:'&#9889;',t:'Key market events & catalysts'},{i:'&#127919;',t:'Buy / Hold / Sell signal'},{i:'&#128202;',t:'All-time high, low & appreciation'}].map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);margin-bottom:6px"><span style="font-size:14px">${r.i}</span><span style="font-size:12px;color:#3a3a3a">${r.t}</span></div>`).join('')}`;
+    return;
+  }
+  if(m.ph==='loading'){el.innerHTML=renderLoading(m.img,'Building market analysis...');return;}
+  if(m.ph==='error'){el.innerHTML=`<div class="ms-err"><div class="ms-err-ic">&#9888;</div><div class="ms-err-t">Market Data Unavailable</div><div class="ms-err-s">${m.err||'Try a clearer image.'}</div><button class="ms-btn" style="max-width:180px;margin:0 auto" onclick="S.market={ph:'idle',img:null,data:null};renderMarket()">Try Again</button></div>`;return;}
+  const d=m.data;
+  const isUp=d.priceHistory?.length>1&&d.priceHistory[d.priceHistory.length-1].price>=d.priceHistory[0].price;
+  const sigBg=!d.buySignal?'rgba(255,255,255,.03)':d.buySignal.includes('Buy')?'rgba(34,197,94,.08)':d.buySignal.includes('Sell')?'rgba(239,68,68,.08)':'rgba(234,179,8,.08)';
+  const sigBd=!d.buySignal?'rgba(255,255,255,.07)':d.buySignal.includes('Buy')?'rgba(34,197,94,.2)':d.buySignal.includes('Sell')?'rgba(239,68,68,.2)':'rgba(234,179,8,.2)';
+  const sigC=!d.buySignal?'#666':d.buySignal.includes('Strong Buy')?'#4ade80':d.buySignal.includes('Buy')?'#a3e635':d.buySignal.includes('Sell')?'#f87171':'#facc15';
+  const appTc=tc(d.totalAppreciation);
+  el.innerHTML=`${renderHero(m.img,()=>{destroyChart();S.market={ph:'idle',img:null,data:null};renderMarket();},d.dataFreshness)}${renderPH(d)}
+  ${d.buySignal?`<div class="ms-sig fu2" style="background:${sigBg};border:1px solid ${sigBd}"><div><div class="ms-sig-l">Market Signal</div><div class="ms-sig-v" style="color:${sigC}">${d.buySignal}</div></div><div style="text-align:right"><div style="font-size:8px;color:#3a3a3a;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Appreciation</div><span class="ms-tag ${tagClass(appTc)}" style="font-size:10px">${d.totalAppreciation||'&mdash;'}</span></div></div>`:''}
+  <div class="ms-g3 fu2"><div class="ms-sc big"><div class="ms-sc-l">Current</div><div class="ms-sc-v" style="color:#c084fc">${d.currentPrice||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">All-Time High</div><div class="ms-sc-v" style="color:#4ade80">${d.allTimeHigh||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">All-Time Low</div><div class="ms-sc-v" style="color:#f87171">${d.allTimeLow||'&mdash;'}</div></div></div>
+  <div class="ms-g3 fu2"><div class="ms-sc"><div class="ms-sc-l">Retail</div><div class="ms-sc-v" style="color:#555">${d.retailPrice||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Liquidity</div><div class="ms-sc-v" style="font-size:12px;color:${d.liquidity==='High'?'#4ade80':d.liquidity==='Low'?'#f87171':'#facc15'}">${d.liquidity||'&mdash;'}</div></div><div class="ms-sc"><div class="ms-sc-l">Volatility</div><div class="ms-sc-v" style="font-size:12px;color:${d.volatility==='High'?'#f87171':d.volatility==='Low'?'#4ade80':'#facc15'}">${d.volatility||'&mdash;'}</div></div></div>
+  ${d.priceHistory?.length?`<div class="fu3"><div class="ms-sl">Price history</div><div class="ms-chart-wrap"><div class="ms-chart-canvas"><canvas id="ms-chart"></canvas></div><div class="ms-chart-legend"><div class="ms-leg-it"><div class="ms-leg-line" style="background:${isUp?'#9333ea':'#f87171'}"></div><span class="ms-leg-lb">Price</span></div><div class="ms-leg-it"><div class="ms-leg-line" style="background:rgba(139,92,246,.3);height:1px"></div><span class="ms-leg-lb">Average</span></div></div></div></div>`:''}
+  ${d.keyEvents?.length?`<div class="fu3"><div class="ms-sl">Key market events</div>${d.keyEvents.map(e=>`<div class="ms-event"><div class="ms-event-dot" style="background:${e.impact==='positive'?'#4ade80':e.impact==='negative'?'#f87171':'#facc15'}"></div><div><div class="ms-event-d">${e.date}</div><div class="ms-event-t">${e.event}</div></div></div>`).join('')}</div>`:''}
+  ${d.analystNote?`<div class="ms-analyst fu4"><div class="ms-analyst-l">Analyst Note</div><div class="ms-analyst-t">${d.analystNote}</div></div>`:''}
+  <div class="fu4" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">${[d.topBuyers&&{l:'Top Buyers',v:d.topBuyers},d.peakSeason&&{l:'Peak Season',v:d.peakSeason}].filter(Boolean).map(r=>`<div style="padding:9px 11px;border-radius:9px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)"><div style="font-size:8px;color:#3a3a3a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;font-weight:700">${r.l}</div><div style="font-size:10px;color:#555">${r.v}</div></div>`).join('')}</div>
+  ${d.dataNotes?`<div class="ms-note-box fu4">&#9432; ${d.dataNotes}</div>`:''}
+  <button class="ms-btn fu4" onclick="destroyChart();S.market={ph:'idle',img:null,data:null};renderMarket()">Analyse New Item</button>`;
+
+  if(d.priceHistory?.length){
+    requestAnimationFrame(()=>setTimeout(()=>buildChart('ms-chart',d.priceHistory),50));
+  }
+}
+
+renderPrice();renderResell();renderMarket();
+</script>
+</body>
+</html>
